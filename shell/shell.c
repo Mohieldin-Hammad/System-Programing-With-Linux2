@@ -46,9 +46,15 @@ char** arg_values(int count, char buf[], char* delim_char)
 	
 	//char *arg_list[count + 1];
 	int init_size = strlen(buf);
+
+	char *copy_of_buffer;
+	copy_of_buffer = calloc(init_size+1, sizeof(char)); 
+
+    	strcpy(copy_of_buffer, buf);
+
 	char* delim = delim_char;
 	int i = 0;
-	char *ptr = strtok(buf, delim);
+	char *ptr = strtok(copy_of_buffer, delim);
 	while(ptr != NULL)
 	{
 		////////////////
@@ -135,8 +141,8 @@ int delete_variable(char* variable){
 	printf("I am inside delete_variable fun\n");
 
 	FILE *file, *temp;
-	char filename[1024] = "data/DB.csv";
-	char temp_filename[1024] = "data/temp___DB.csv";
+	char filename[] = "data/DB.csv";
+	char temp_filename[] = "data/temp___DB.csv";
 	char buffer[100];
 	file = fopen(filename, "r");
 	temp = fopen(temp_filename, "w");
@@ -187,13 +193,28 @@ int change_variable(char* variable, char* value){
 }
 //------------------------------------------------------------------------------------------------
 bool isEmpty(){
-	
+	FILE* file_path = fopen("data/DB.csv", "ab+");
+	if (!file_path){
+		printf(RED "Can't open file\n" RESET);
+		return true;
+	}
+	fseek (file_path, 0, SEEK_END);
+    	int size = ftell(file_path);
+
+    	if (0 == size) {
+       		printf("file is empty\n");
+		return true;
+    	}
+	return false;
 }
 //------------------------------------------------------------------------------------------------
 int count_of_variables(){
 
 }
+
+
 //------------------------------------------------------------------------------------------------
+
 int delete_all_variables() {
         //////////////
 	printf("I am inside delete_all_variables fun\n");
@@ -247,38 +268,110 @@ int print_local_var(){
 	return 0;
 
 }
+//------------------------------------------------------------------------------------------------
+char* value_of(char* variable){
+	
+	/////////////////////
+	printf("I am inside value_of fun\n");
+
+	FILE *file;
+	char filename[] = "data/DB.csv";
+	char buffer[100];
+	file = fopen(filename, "r");
+
+	if (file == NULL){
+		printf("Error opening file\n");
+		return NULL;
+	}
+	while (fgets(buffer, 100, file))
+	{
+		char *value = strtok(buffer, ", ");
+		if (strcmp(value, variable) == 0){
+			value = strtok(NULL, ", ");
+			return value;
+		}
+	}
+	return NULL;
+}
 //-------------------------------------------------------------------------------------------------
 bool check_export(char* buf)
 {
 	////////////////
 	printf("I am inside check_export fun\n");
+	printf("buf after joining check_export = %s\n", buf);
+
 	bool can_exp = true;
 	int count = arg_count(buf);
+	printf("count inside check_export = %d\n", count);
+	printf("buf after getting the count inside check_export = %s\n", buf);
+
 	char** arg_list= arg_values(count+1, buf, " ");
-	char* copy_of_first_arg = malloc(strlen(arg_list[0])+1);
+	printf("buf before copy_of_first_arg = %s\n", buf);
+
+	char* copy_of_first_arg = malloc(strlen(arg_list[0])+1* sizeof(char));
+	
 	strcpy(copy_of_first_arg, arg_list[0]);
+	
 	if (strcmp(copy_of_first_arg, "export") == 0){
-		char* var;
+		printf("buf before starting the for loop inside check_export = %s\n", buf);
+
 		for (int i = 1; i < count; i++){
-			var = (char *)realloc(var, strlen(arg_list[i])+1);
+			char *var;
+			var = calloc(strlen(arg_list[i])+1, sizeof(char)); 
 			strcpy(var, arg_list[i]);
 			if(!varIsLocal(var)){
 
-				printf("There is word export but there is variable that is not local");
+				printf("There is word export but there is variable that is not local\n");
 				can_exp = false;
 				break;
 			}
 		}
 	}
 	else{
-		printf("There is know word export");
+		printf("There is no word export\n");
 		can_exp = false;
 	}
+	printf("buf before exit the check_export = %s\n", buf);
+	printf("can_exp is true\n");
 	return can_exp;
 
 }
 
 //-------------------------------------------------------------------------------------------------
+
+int export_variables(char* buf)
+{
+	////////////////
+	printf("I am inside add_env fun and buf = %s\n", buf);
+	int len;
+	int count = arg_count(buf);
+	char** arg_list= arg_values(count+1, buf, " ");
+	for (int i = 1; i < count; i++)
+	{
+		char* val = value_of(arg_list[i]);
+		if (val != NULL){
+			int len = strlen(val);
+			val[len - 1] = 0;
+			/////////////////
+			printf("var= %s, val = %s\n",arg_list[i], val); 
+			printf("adding %s to env\n", val);
+			
+			const char *copy_of_val = (const char*)val;
+			
+			
+			int status = setenv(arg_list[i], copy_of_val, 1);
+			
+			if (status == 0)
+				printf("adding variable is worked properly\n");
+			else
+				printf("adding variable to env is failed:)\n");
+		}
+	}
+	return 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+
 
 int main()
 {
@@ -313,7 +406,8 @@ int main()
 		{
 			///////////////////
 			printf("I am inside add_eniv comp\n");
-			//add_env(myVars, buf);
+			printf("buf before joining the export_variable = %s\n", buf);
+			export_variables(buf);
 			continue;
 		}
 
@@ -363,7 +457,7 @@ int main()
 			char **arg_list = arg_values(count+1, buf, " ");
 			printf("----------------------------\n");
 			execvp(arg_list[0], arg_list);
-			printf(CYN "Exit failed :)\n" RESET);
+			printf(CYN "command failed :)\n" RESET);
 			return -1;
 		}
 	}
