@@ -349,18 +349,26 @@ int export_variables(char* buf)
 	for (int i = 1; i < count; i++)
 	{
 		char* val = value_of(arg_list[i]);
-		if (val != NULL){
-			int len = strlen(val);
-			val[len - 1] = 0;
+		int len = strlen(val);
+		val[len - 1] = 0;
+
+		char *copy_of_val;
+		copy_of_val = calloc(strlen(val)+1, sizeof(char)); 
+    		strcpy(copy_of_val, val);
+		
+		if (val != NULL){	
+			
+			// first way to add environment variable
+			//char* full_variable = strcat(strcat(arg_list[i], "="), copy_of_val);
+			//////////////////
+			//printf("adding %s to env\n", full_variable);
+			//int status = putenv(full_variable);	
+			
 			/////////////////
-			printf("var= %s, val = %s\n",arg_list[i], val); 
-			printf("adding %s to env\n", val);
-			
-			const char *copy_of_val = (const char*)val;
-			
-			
+			printf("var= %s, val = %s\n",arg_list[i], copy_of_val); 
+			printf("adding %s to env\n", copy_of_val);
 			int status = setenv(arg_list[i], copy_of_val, 1);
-			
+				
 			if (status == 0)
 				printf("adding variable is worked properly\n");
 			else
