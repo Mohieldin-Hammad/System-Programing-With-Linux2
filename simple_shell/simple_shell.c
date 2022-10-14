@@ -6,6 +6,9 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
+#include <readline/readline.h>
+#include <readline/history.h>
 //Define colors to be used in the simple shell
 #define RED   "\x1B[31m"
 #define GRN   "\x1B[32m"
@@ -349,6 +352,59 @@ int export_variables(char* buf)
 	return status;
 }
 //-------------------------------------------------------------------------------------------------
+bool check_to_unset(char* buf)
+{
+	////////////////
+	//printf("I am inside check_env fun\n");
+	
+	bool is_env = true;
+	int count = arg_count(buf);
+	if (count == 1)
+		return false;
+	// arg_values is spliting the buffer string to list of strings
+	char** arg_list= arg_values(count+1, buf, " ");
+	
+	char* copy_of_first_arg = malloc(strlen(arg_list[0])+1* sizeof(char));	
+	strcpy(copy_of_first_arg, arg_list[0]);
+
+	if (strcmp(copy_of_first_arg, "unset") == 0){
+		for (int i = 1; i < count; i++){
+			char *var;
+			var = calloc(strlen(arg_list[i])+1, sizeof(char)); 
+			strcpy(var, arg_list[i]);
+			if(getenv(var) == NULL){
+				is_env = false;
+				printf("*There is unenvironment variable");
+				free(var);
+				break;
+			}
+			free(var);
+		}
+	}
+	else{
+		is_env = false;
+	}
+	free(arg_list);
+	free(copy_of_first_arg);
+
+	return is_env;
+}
+//-------------------------------------------------------------------------------------------------
+int unset(char* buf)
+{
+	int status;
+	int count =arg_count(buf);
+	char** arg_list= arg_values(count+1, buf, " ");
+	for (int i = 1; i < count; i++) 
+	{
+		status =  unsetenv(arg_list[i]);				
+		if (status == -1)
+			break;	
+	}
+	free(arg_list);
+	return status;
+}
+//-------------------------------------------------------------------------------------------------
 int str_length(char str[]) {
        int count; 
        for (count = 0; str[count] != '\0'; ++count);
@@ -381,7 +437,7 @@ int main()
 		char buf[2048];
 		printf(GRN "[mohieldin@boss" MAG " ~" RESET"]$ ");
 		fgets(buf, 2048, stdin);
-		
+
 		int len = str_length(buf);
 		////////////////
 		//printf("len= %d\n", len);
@@ -410,6 +466,11 @@ int main()
 			//printf("I am inside add_eniv comp\n");
 			export_variables(buf);
 			continue;
+		}
+
+		if (check_to_unset(buf)){
+			unset(buf);
+			continue;	
 		}
 
 		if (isVar(buf)){
